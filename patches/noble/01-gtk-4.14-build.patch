@@ -1,0 +1,67 @@
+Description: Build Ghostty 1.4 against GTK 4.14 / libadwaita 1.5 (Ubuntu 24.04)
+ Ghostty 1.4.0 raised its hard minimums to GTK 4.18 and libadwaita 1.7
+ (upstream commit 97fb364029). Ubuntu 24.04 ships GTK 4.14.5 and libadwaita
+ 1.5.0. Lowering the two minimum_version constants leaves one call into a
+ newer API, gtk_css_section_get_bytes (GTK 4.16), which only adds the
+ offending CSS snippet to a log warning. This patch drops that call; the
+ existing fallback logs the same warning without the snippet.
+ .
+ 02-gtk-4.14-css.patch fixes the stylesheet, which this patch leaves as is.
+ .
+ Written against Ghostty 1.4.0. If a newer release fails to apply it, or
+ fails to link with an undefined gtk_* / adw_* symbol, it needs updating.
+Forwarded: not-needed
+Last-Update: 2026-10-27
+---
+diff --git a/src/apprt/gtk/adw_version.zig b/src/apprt/gtk/adw_version.zig
+index 975c7b5..59e75e1 100644
+--- a/src/apprt/gtk/adw_version.zig
++++ b/src/apprt/gtk/adw_version.zig
+@@ -18,7 +18,7 @@ pub const comptime_version: std.SemanticVersion = .{
+ 
+ pub const minimum_version: std.SemanticVersion = .{
+     .major = 1,
+-    .minor = 7,
++    .minor = 5,
+     .patch = 0,
+ };
+ 
+diff --git a/src/apprt/gtk/class/application.zig b/src/apprt/gtk/class/application.zig
+index 08d5d7c..d58d66a 100644
+--- a/src/apprt/gtk/class/application.zig
++++ b/src/apprt/gtk/class/application.zig
+@@ -1289,20 +1289,7 @@ pub const Application = extern struct {
+     ) callconv(.c) void {
+         const location = css_section.toString();
+         defer glib.free(location);
+-        bytes: {
+-            const bytes = css_section.getBytes() orelse break :bytes;
+-            var len: usize = undefined;
+-            const ptr = bytes.getData(&len) orelse break :bytes;
+-            const data = ptr[0..len];
+-            log.warn("css parsing failed at {s}: {s} {d} {s}\n{s}", .{
+-                location,
+-                glib.quarkToString(err.f_domain),
+-                err.f_code,
+-                err.f_message orelse "«unknown»",
+-                data,
+-            });
+-            return;
+-        }
++        // gtk_css_section_get_bytes needs GTK 4.16; Ubuntu 24.04 has 4.14.
+         log.warn("css parsing failed at {s}: {s} {d} {s}", .{
+             location,
+             glib.quarkToString(err.f_domain),
+diff --git a/src/apprt/gtk/gtk_version.zig b/src/apprt/gtk/gtk_version.zig
+index 97c1f10..eaaf7c5 100644
+--- a/src/apprt/gtk/gtk_version.zig
++++ b/src/apprt/gtk/gtk_version.zig
+@@ -17,7 +17,7 @@ pub const comptime_version: std.SemanticVersion = .{
+ 
+ pub const minimum_version: std.SemanticVersion = .{
+     .major = 4,
+-    .minor = 18,
++    .minor = 14,
+     .patch = 0,
+ };
+ 

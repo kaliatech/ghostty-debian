@@ -46,7 +46,7 @@ jobs:
             --body "$(cat <<EOF
           Ghostty [$LATEST](https://github.com/ghostty-org/ghostty/releases/tag/v$LATEST) has been released upstream. This repo is currently pinned to \`$CURRENT\`.
 
-          Before bumping \`GHOSTTY_VERSION\` in the \`Dockerfile\`, check whether \`ZIG_VERSION\` also needs to change for this release, per the [build docs](https://ghostty.org/docs/install/build#zig-version).
+          Before bumping \`GHOSTTY_VERSION\` in the \`Dockerfile\`, check whether \`ZIG_VERSION\` also needs to change for this release, per the [build docs](https://ghostty.org/docs/install/build#zig-version). The Ubuntu 24.04 patch in \`patches/noble/\` may also need updating; see the README.
 
           This issue was filed automatically by the \`check-ghostty-version\` workflow.
           EOF

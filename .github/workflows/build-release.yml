@@ -48,21 +48,39 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        suite: [stable, testing]
+        include:
+          - name: debian-stable
+            image: debian:stable
+          - name: debian-testing
+            image: debian:testing
+          - name: ubuntu-24.04
+            image: ubuntu:24.04
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
       - name: Build .deb
         run: |
           docker build \
-            --build-arg DEBIAN_SUITE=${{ matrix.suite }} \
+            --build-arg BASE_IMAGE=${{ matrix.image }} \
             --build-arg GHOSTTY_VERSION=${{ needs.resolve.outputs.ghostty_version }} \
             --build-arg ZIG_VERSION=${{ needs.resolve.outputs.zig_version }} \
             --build-arg PKG_REVISION=${{ needs.resolve.outputs.pkg_revision }} \
             --output=build .
+      - name: Smoke test
+        run: |
+          DEB="$(cd build && ls ghostty_*.deb)"
+          docker run --rm \
+            -v "$PWD/build:/b:ro" -v "$PWD/test:/t:ro" -v "$PWD/smoke:/out" \
+            ${{ matrix.image }} bash /t/smoke.sh "/b/$DEB"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-${{ matrix.name }}
+          path: smoke/
+          retention-days: 7
       - uses: actions/upload-artifact@v4
         with:
-          name: deb-${{ matrix.suite }}
+          name: deb-${{ matrix.name }}
           path: build/*.deb
           retention-days: 7
 
@@ -72,6 +90,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
+          pattern: deb-*
           path: build
           merge-multiple: true
       - name: Create or update release
